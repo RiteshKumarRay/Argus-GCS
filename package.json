@@ -1,0 +1,12 @@
+{
+  "name": "node-red-user-directory",
+  "version": "1.0.0",
+  "description": "Node-RED User Directory",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "node-red": "^4.1.11",
+    "node-red-contrib-web-worldmap": "^5.8.1",
+    "node-red-dashboard": "^3.6.6"
+  }
+}
