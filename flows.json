@@ -266,13 +266,8 @@
         "x": 280,
         "y": 280,
         "wires": [
-            [
-                "ui-gcs-template"
-            ],
-            [
-                "gcs-map-node",
-                "planner-map-node"
-            ]
+            [],
+            []
         ]
     },
     {
@@ -392,13 +387,17 @@
         "type": "function",
         "z": "gcs-tab",
         "name": "Move Map Marker",
-        "func": "\nconst d = msg.payload && msg.payload.data;\nif (!d || !d.lat || !d.lon) return null;\n\n// This tells the template to move the Leaflet marker\nmsg.payload = {\n    type: \"gps\",\n    data: {\n        lat:     d.lat,\n        lon:     d.lon,\n        heading: d.heading || 0,\n        alt:     d.alt     || 0,\n    }\n};\nreturn msg;\n",
-        "outputs": 1,
+        "func": "\nconst d = msg.payload && msg.payload.data;\nif (!d || !d.lat || !d.lon) return null;\n\n// 1. To Template (Updates angular scope variables)\nvar templateMsg = {\n    payload: {\n        type: \"gps\",\n        data: {\n            lat:     d.lat,\n            lon:     d.lon,\n            heading: d.heading || 0,\n            alt:     d.alt     || 0,\n        }\n    }\n};\n\n// 2. To Worldmap (Updates drone icon on map)\nvar isError = false; // Add battery check if needed\nvar armed = d.armed || false;\nvar markerColor = armed ? \"#2ecc71\" : \"#4facfe\"; // Green if armed, light blue if disarmed\n\nvar mapMsg = {\n    payload: {\n        name: \"Drone\",\n        lat: d.lat,\n        lon: d.lon,\n        icon: \"quad\",\n        iconColor: markerColor,\n        bearing: d.heading || 0,\n        iconSize: 48,\n        layer: \"Drone Location\",\n        tooltip: \"ArduCopter SITL\"\n    }\n};\n\nreturn [templateMsg, mapMsg];\n",
+        "outputs": 2,
         "x": 720,
         "y": 20,
         "wires": [
             [
                 "ui-gcs-template"
+            ],
+            [
+                "gcs-map-node",
+                "planner-map-node"
             ]
         ]
     }
