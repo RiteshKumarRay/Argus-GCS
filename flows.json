@@ -405,7 +405,7 @@
     {
         "id": "argus-cmd-out",
         "type": "mqtt out",
-        "z": null,
+        "z": "gcs-tab",
         "name": "Send Command",
         "topic": "argus/command/drone",
         "qos": "0",
