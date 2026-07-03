@@ -51,6 +51,7 @@ COPTER_MODES = {
 
 state = {
     "lat": 0.0, "lon": 0.0, "alt": 0.0, "rel_alt": 0.0,
+    "home_lat": 0.0, "home_lon": 0.0, "home_alt": 0.0,
     "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
     "rollspeed": 0.0, "pitchspeed": 0.0, "yawspeed": 0.0,
     "airspeed": 0.0, "groundspeed": 0.0, "heading": 0,
@@ -64,6 +65,8 @@ state = {
     "has_gps": False,     # True after first GPS_RAW_INT received
     "has_battery": False, # True after first battery message received
 }
+
+master = None # Global for MQTT command handler
 
 def rad_to_deg(r):
     return round(math.degrees(r), 2)
@@ -166,6 +169,13 @@ def process_message(msg, mqtt_client):
             "remaining": state["battery_remaining"],
         }))
 
+    elif t == "HOME_POSITION":
+        state.update({
+            "home_lat": msg.latitude / 1e7,
+            "home_lon": msg.longitude / 1e7,
+            "home_alt": msg.altitude / 1000.0,
+        })
+
     elif t == "GPS_RAW_INT":
         state.update({
             "satellites": msg.satellites_visible,
@@ -194,6 +204,8 @@ def publish_combined(mqtt_client):
                 "lat":         state["lat"],
                 "lon":         state["lon"],
                 "alt":         state["alt"],
+                "home_lat":    state["home_lat"],
+                "home_lon":    state["home_lon"],
                 "rel_alt":     state["rel_alt"],
                 "roll":        state["roll"],
                 "pitch":       state["pitch"],
@@ -228,7 +240,43 @@ def main():
 
     # Connect MQTT
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="argus-mavlink-bridge")
-    client.on_connect = lambda c, u, f, r, p: print(f"[MQTT] Connected to broker at {args.mqtt_host}:{args.mqtt_port}")
+    
+    def on_connect(c, u, f, r, p):
+        print(f"[MQTT] Connected to broker at {args.mqtt_host}:{args.mqtt_port}")
+        c.subscribe("argus/command/drone")
+        
+    def on_message(c, u, msg):
+        global master
+        if master is None: return
+        try:
+            cmd = json.loads(msg.payload.decode('utf-8'))
+            action = cmd.get("action")
+            print(f"[Command] Received: {action}")
+            if action == "arm":
+                master.mav.command_long_send(
+                    master.target_system, master.target_component,
+                    mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+                    0, 1 if cmd.get("state", True) else 0, 0, 0, 0, 0, 0, 0)
+            elif action == "takeoff":
+                master.mav.command_long_send(
+                    master.target_system, master.target_component,
+                    mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+                    0, 0, 0, 0, 0, 0, 0, 10) # Take-off to 10m
+            elif action == "land":
+                master.mav.command_long_send(
+                    master.target_system, master.target_component,
+                    mavutil.mavlink.MAV_CMD_NAV_LAND,
+                    0, 0, 0, 0, 0, 0, 0, 0)
+            elif action == "rtl":
+                master.mav.command_long_send(
+                    master.target_system, master.target_component,
+                    mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
+                    0, 0, 0, 0, 0, 0, 0, 0)
+        except Exception as e:
+            print(f"[Command] Error processing msg: {e}")
+
+    client.on_connect = on_connect
+    client.on_message = on_message
     client.connect(args.mqtt_host, args.mqtt_port, keepalive=60)
     client.loop_start()
 
@@ -237,6 +285,7 @@ def main():
     t.start()
 
     # Connect MAVLink
+    global master
     master = setup_mavlink(args.sitl_address)
 
     print("[Bridge] Running. Press Ctrl+C to stop.")
