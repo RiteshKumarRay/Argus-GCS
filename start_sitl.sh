@@ -57,7 +57,9 @@ for i in $(seq 1 30); do
         exit 1
     fi
     if ss -ltn 2>/dev/null | grep -q ":5760"; then
-        echo "   ✓ TCP 5760 ready after ${i}s"
+        echo "   ✓ TCP 5760 ready after ${i}s — waiting 10s more for SITL sim loop to init..."
+        for j in $(seq 1 10); do sleep 1; printf "."; done
+        echo " ready!"
         break
     fi
     printf "."
@@ -72,9 +74,10 @@ echo "   → UDP 14551 (Argus bridge)"
 mavproxy.py \
     --master tcp:127.0.0.1:5760 \
     --sitl 127.0.0.1:5501 \
-    --out udp:127.0.0.1:14550 \
-    --out udp:127.0.0.1:14551 \
+    --out 127.0.0.1:14550 \
+    --out 127.0.0.1:14551 \
     --retries 10 \
+    --aircraft ArduCopter \
     > "$LOG_DIR/mavproxy.log" 2>&1 &
 
 MAVPROXY_PID=$!
