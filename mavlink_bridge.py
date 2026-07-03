@@ -55,11 +55,14 @@ state = {
     "rollspeed": 0.0, "pitchspeed": 0.0, "yawspeed": 0.0,
     "airspeed": 0.0, "groundspeed": 0.0, "heading": 0,
     "throttle": 0, "climb": 0.0,
-    "voltage": 0.0, "current": 0.0, "battery_remaining": 0,
+    "voltage": 0.0, "current": 0.0, "battery_remaining": -1,  # -1 = no data yet
     "satellites": 0, "fix_type": 0, "hdop": 0.0,
     "armed": False, "mode": "UNKNOWN", "system_status": 0,
     "vx": 0.0, "vy": 0.0, "vz": 0.0,
     "ekf_ok": True, "last_heartbeat": 0,
+    "connected": False,   # True after first heartbeat received
+    "has_gps": False,     # True after first GPS_RAW_INT received
+    "has_battery": False, # True after first battery message received
 }
 
 def rad_to_deg(r):
@@ -84,9 +87,13 @@ def process_message(msg, mqtt_client):
     if t == "HEARTBEAT":
         armed = bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
         mode  = COPTER_MODES.get(msg.custom_mode, f"MODE_{msg.custom_mode}")
+        was_connected = state["connected"]
         state.update({"armed": armed, "mode": mode,
                       "system_status": msg.system_status,
-                      "last_heartbeat": time.time()})
+                      "last_heartbeat": time.time(),
+                      "connected": True})
+        if not was_connected:
+            print(f"[Bridge] ✓ SITL connected! Mode={mode}, Armed={armed}")
         mqtt_client.publish("argus/telemetry/heartbeat", json.dumps({
             "armed": armed, "mode": mode,
             "base_mode": msg.base_mode,
@@ -174,9 +181,15 @@ def process_message(msg, mqtt_client):
         }))
 
 def publish_combined(mqtt_client):
-    """Publish the full combined state at PUBLISH_HZ rate."""
+    """Publish the full combined state at PUBLISH_HZ rate.
+    Does NOT publish until a real heartbeat has been received from SITL."""
+    print("[Bridge] Combined publisher running — waiting for SITL heartbeat...")
     while True:
         try:
+            # Don't publish zeros before SITL is ready
+            if not state["connected"]:
+                time.sleep(0.5)
+                continue
             payload = {
                 "lat":         state["lat"],
                 "lon":         state["lon"],
@@ -192,7 +205,8 @@ def publish_combined(mqtt_client):
                 "climb":       state["climb"],
                 "voltage":     state["voltage"],
                 "current":     state["current"],
-                "battery":     state["battery_remaining"],
+                # Only send battery once we have real data (not -1 placeholder)
+                "battery":     state["battery_remaining"] if state["battery_remaining"] >= 0 else 0,
                 "satellites":  state["satellites"],
                 "fix_type":    state["fix_type"],
                 "hdop":        state["hdop"],
