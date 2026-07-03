@@ -253,25 +253,27 @@ def main():
             action = cmd.get("action")
             print(f"[Command] Received: {action}")
             if action == "arm":
+                arm_state = 1 if cmd.get("state", True) else 0
+                if arm_state == 1:
+                    # Switch to GUIDED mode to allow GCS arming
+                    master.mav.set_mode_send(master.target_system, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, 4)
                 master.mav.command_long_send(
                     master.target_system, master.target_component,
                     mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
-                    0, 1 if cmd.get("state", True) else 0, 0, 0, 0, 0, 0, 0)
+                    0, arm_state, 0, 0, 0, 0, 0, 0)
             elif action == "takeoff":
+                # Ensure GUIDED mode for takeoff
+                master.mav.set_mode_send(master.target_system, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, 4)
                 master.mav.command_long_send(
                     master.target_system, master.target_component,
                     mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
                     0, 0, 0, 0, 0, 0, 0, 10) # Take-off to 10m
             elif action == "land":
-                master.mav.command_long_send(
-                    master.target_system, master.target_component,
-                    mavutil.mavlink.MAV_CMD_NAV_LAND,
-                    0, 0, 0, 0, 0, 0, 0, 0)
+                # Switch to LAND mode (custom mode 9)
+                master.mav.set_mode_send(master.target_system, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, 9)
             elif action == "rtl":
-                master.mav.command_long_send(
-                    master.target_system, master.target_component,
-                    mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
-                    0, 0, 0, 0, 0, 0, 0, 0)
+                # Switch to RTL mode (custom mode 6)
+                master.mav.set_mode_send(master.target_system, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, 6)
         except Exception as e:
             print(f"[Command] Error processing msg: {e}")
 
