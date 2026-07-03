@@ -257,13 +257,16 @@ def main():
                 if arm_state == 1:
                     # Switch to GUIDED mode to allow GCS arming
                     master.mav.set_mode_send(master.target_system, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, 4)
+                    time.sleep(0.5)
+                # Force arm by using 21196 as param2 to bypass some strict checks in SITL, or just use 0. We'll use 0 first but wait for mode.
                 master.mav.command_long_send(
                     master.target_system, master.target_component,
                     mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
-                    0, arm_state, 0, 0, 0, 0, 0, 0)
+                    0, arm_state, 21196 if arm_state == 0 else 0, 0, 0, 0, 0, 0)
             elif action == "takeoff":
                 # Ensure GUIDED mode for takeoff
                 master.mav.set_mode_send(master.target_system, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, 4)
+                time.sleep(0.5)
                 master.mav.command_long_send(
                     master.target_system, master.target_component,
                     mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
