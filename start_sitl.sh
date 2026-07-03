@@ -78,29 +78,22 @@ mavproxy.py \
     --out 127.0.0.1:14551 \
     --retries 10 \
     --aircraft ArduCopter \
+    --daemon \
     > "$LOG_DIR/mavproxy.log" 2>&1 &
 
 MAVPROXY_PID=$!
 echo "   MAVProxy PID: $MAVPROXY_PID"
 
-# Wait for MAVProxy to bind 14550
-echo "   Waiting for MAVProxy to bind UDP 14550..."
-for i in $(seq 1 20); do
-    sleep 1
-    if ! kill -0 $MAVPROXY_PID 2>/dev/null; then
-        echo ""
-        echo "ERROR: MAVProxy died. Log:"
-        tail -15 "$LOG_DIR/mavproxy.log"
-        kill $COPTER_PID 2>/dev/null
-        exit 1
-    fi
-    if ss -lun 2>/dev/null | grep -q ":14550"; then
-        echo "   ✓ UDP 14550 ready after ${i}s"
-        break
-    fi
-    printf "."
-done
-echo ""
+# Wait for MAVProxy to initialize
+echo "   Waiting 3s for MAVProxy to initialize..."
+sleep 3
+if ! kill -0 $MAVPROXY_PID 2>/dev/null; then
+    echo "ERROR: MAVProxy died. Log:"
+    tail -15 "$LOG_DIR/mavproxy.log"
+    kill $COPTER_PID 2>/dev/null
+    exit 1
+fi
+echo "   ✓ MAVProxy running"
 
 # ── 3. Start MAVLink → MQTT bridge ──────────────────────────────────────────
 echo "[3/3] Starting MAVLink → MQTT bridge..."
