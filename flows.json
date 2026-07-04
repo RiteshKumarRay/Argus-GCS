@@ -428,7 +428,7 @@
         "id": "sitl-exec-node-d2d6bd4f",
         "type": "exec",
         "z": "gcs-tab",
-        "command": "bash -c 'export DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus; if [ \"$1\" = \"start\" ]; then gnome-terminal -- bash -c \"\\\"/home/ritesh/Argus GCS/start_sitl.sh\\\"; exec bash\" & else pkill -9 -f \"start_sitl.sh\" || true; pkill -9 -f arducopter || true; pkill -9 -f mavproxy.py || true; pkill -9 -f mavlink_bridge.py || true; fi' -- ",
+        "command": "bash -c 'if [ \"$1\" = \"start\" ]; then nohup bash \"/home/ritesh/Argus GCS/start_sitl.sh\" > /tmp/sitl_boot.log 2>&1 & else pkill -9 -f \"start_sitl.sh\" || true; pkill -9 -f arducopter || true; pkill -9 -f mavproxy.py || true; pkill -9 -f mavlink_bridge.py || true; fi' -- ",
         "addpay": "payload",
         "append": "",
         "useSpawn": "false",
