@@ -1,6 +1,6 @@
 # Argus GCS
 
-**Argus GCS** is a professional-grade Ground Control Station built on Node-RED, designed for real-time drone operations, autonomous mission planning, and emergency crash recovery. The UI features a premium dark-mode glassmorphism aesthetic with live telemetry, interactive mapping, AI-powered person detection, and a cryptographic flight log verification system.
+**Argus GCS** is a Ground Control Station built on Node-RED, designed for real-time drone operations, autonomous mission planning, and emergency crash recovery. The UI features a premium dark-mode glassmorphism aesthetic with live telemetry, interactive mapping, AI-powered person detection, and a cryptographic flight log verification system.
 
 ![Argus GCS Dashboard](Photos/Dashboard.png)
 
